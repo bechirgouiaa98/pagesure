@@ -8,6 +8,8 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import PageReviews from './pages/PageReviews';
 import MyReviews from './pages/MyReviews';
+import CategoriesPage from './pages/CategoriesPage';
+import CategoryPagesList from './pages/CategoryPagesList';
 
 const theme = createTheme({
   palette: {
@@ -58,6 +60,8 @@ function App() {
           }}>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/categories" element={<CategoriesPage />} />
+              <Route path="/categories/:categoryKey" element={<CategoryPagesList />} />
               <Route path="/page/:pageId" element={<PageReviews />} />
               <Route path="/my-reviews" element={<MyReviews />} />
             </Routes>
