@@ -1,8 +1,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const { scrapeFacebookPage } = require('./facebook_scraper');
 
 const app = express();
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://pagesure-1.onrender.com'
+  ]
+}));
 app.use(bodyParser.json());
 
 app.post('/api/scrape', async (req, res) => {
