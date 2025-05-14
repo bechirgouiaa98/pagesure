@@ -14,7 +14,8 @@ import {
   Avatar,
   Divider,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
 import {
   collection,
@@ -34,13 +35,36 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import StarHalfIcon from '@mui/icons-material/StarHalf';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 interface PageData {
-  cover_image: string;
-  logo_image: string;
-  page_name: string;
-  likes: string;
-  followers: string;
+  facebookUrl: string;
+  info: string[];
+  messenger: string | null;
+  title: string;
+  pageId: string;
+  pageName: string;
+  pageUrl: string;
+  intro: string;
+  websites: string[];
+  email?: string;
+  website?: string;
+  profilePictureUrl: string;
+  coverPhotoUrl: string;
+  profilePhoto?: string;
+  creation_date?: string;
+  ad_status?: string;
+  about_me?: { text: string; urls: string[] };
+  facebookId?: string;
+  pageAdLibrary?: any;
+  address?: string;
+  phone?: string;
+  rating?: string;
+  ratingOverall?: number;
+  ratingCount?: number;
+  confirmed_owner?: string;
+  category?: string;
+  verified?: boolean;
 }
 
 interface Review {
@@ -89,11 +113,18 @@ function getStarColor(rating: number) {
   return '#EF4444'; // Mauvais
 }
 
+// Add this helper function after imports
+function formatNumber(n: number) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return n.toString();
+}
+
 const PageReviews = () => {
   const { pageId } = useParams<{ pageId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,14 +151,14 @@ const PageReviews = () => {
         let pageDataFromState = state?.pageData;
         let finalPageData = pageDataFromState;
         // Fallback: fetch from Firestore if missing or missing fields
-        if (!finalPageData || !finalPageData.page_name || !finalPageData.followers) {
+        if (!finalPageData || !finalPageData.title) {
           const pageRef = doc(db, 'pages', String(pageId));
           const pageSnap = await getDoc(pageRef);
           if (pageSnap.exists()) {
             finalPageData = { ...finalPageData, ...pageSnap.data() };
           }
         }
-        if (finalPageData && finalPageData.page_name) {
+        if (finalPageData && finalPageData.title) {
           setPageData(finalPageData as PageData);
         } else {
           // Si pas de données dans l'état ni Firestore, rediriger vers la page d'accueil
@@ -188,8 +219,8 @@ const PageReviews = () => {
     try {
       const reviewData = {
         pageId,
-        pageLogo: pageData.logo_image,
-        pageName: pageData.page_name,
+        pageLogo: pageData.profilePictureUrl,
+        pageName: pageData.title,
         userId: user.uid,
         userName: user.displayName,
         userPhoto: user.photoURL,
@@ -280,45 +311,112 @@ const PageReviews = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 2, md: 5 } }}>
-      {/* Header Trustpilot style modernisé */}
-      <Grid container spacing={3} alignItems="center" sx={{ mb: 4, flexWrap: 'wrap' }}>
-        {/* Left: Profile info vertical */}
+      {/* Header: compact business info */}
+      <Grid container spacing={2} alignItems="center" sx={{ mb: 2, flexWrap: 'wrap', justifyContent: 'center', position: 'relative' }}>
+        {/* Facebook Button Top Left */}
+        {pageData.pageUrl && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: { xs: 12, md: 18 },
+              left: { xs: 12, md: 32 },
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              href={pageData.pageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                borderRadius: '50%',
+                minWidth: { xs: 36, md: 44 },
+                minHeight: { xs: 36, md: 44 },
+                width: { xs: 36, md: 44 },
+                height: { xs: 36, md: 44 },
+                p: 0,
+                background: '#1877F3',
+                color: '#fff',
+                boxShadow: '0 2px 8px rgba(24,119,243,0.10)',
+                '&:hover': {
+                  background: '#145db2',
+                  color: '#fff',
+                  boxShadow: '0 4px 16px rgba(24,119,243,0.15)'
+                },
+                alignSelf: 'flex-start',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" style={{ width: 22, height: 22 }} />
+            </Button>
+          </Box>
+        )}
+        {/* Main header content */}
         <Grid item xs={12} md={7}>
-          <Box display="flex" alignItems="center" gap={3}>
+          <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
             <Avatar
-              src={pageData.logo_image || undefined}
-              alt={pageData.page_name}
-              sx={{ width: 96, height: 96, boxShadow: 4, border: '5px solid #fff', background: '#fff', borderRadius: 4 }}
+              src={pageData.profilePictureUrl || undefined}
+              alt={pageData.title}
+              sx={{
+                width: { xs: 140, md: 160 },
+                height: { xs: 140, md: 160 },
+                boxShadow: 5,
+                border: '5px solid #fff',
+                background: '#fff',
+                borderRadius: '50%',
+                mb: 1,
+                mx: 'auto',
+                display: 'block',
+              }}
             />
-            <Box>
-              <Typography variant="h3" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: 0.5, color: '#10B981', fontSize: { xs: 28, md: 38 } }}>
-                {pageData.page_name}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', mb: 1, gap: 1 }}>
+              <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, letterSpacing: 0.5, color: '#10B981', fontSize: { xs: 36, md: 44 }, textAlign: 'center' }}>
+                {pageData.title}
+                {pageData.verified && (
+                  <Tooltip title="Vérifié" arrow>
+                    <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 8 }}>
+                      <CheckCircleIcon
+                        sx={{
+                          color: '#1877F2',
+                          fontSize: 28,
+                          cursor: 'pointer',
+                          verticalAlign: 'middle',
+                        }}
+                      />
+                    </span>
+                  </Tooltip>
+                )}
               </Typography>
-              {pageData.followers && (
-                <Typography variant="subtitle1" sx={{ fontSize: 18, fontWeight: 500, color: '#1F2937' }}>
-                  {pageData.followers}
-                </Typography>
-              )}
             </Box>
+            {pageData.category && (
+              <Typography variant="subtitle2" sx={{ fontSize: { xs: 22, md: 24 }, fontWeight: 600, color: '#6B7280', mt: 0.5, textAlign: 'center' }}>
+                {pageData.category}
+              </Typography>
+            )}
           </Box>
         </Grid>
-        {/* Right: Modern summary card */}
         <Grid item xs={12} md={5}>
           <Paper elevation={0} sx={{
-            p: 3,
+            p: { xs: 1.5, md: 3 },
             borderRadius: 4,
-            minWidth: 260,
+            minWidth: 180,
             maxWidth: 350,
-            mx: 'auto',
+            mx: { xs: 0, md: 'auto' },
             boxShadow: '0 8px 32px rgba(16,185,129,0.12)',
             background: 'linear-gradient(135deg, #FFFFFF 80%, #F3F4F6 100%)',
             textAlign: 'center',
+            width: { xs: '100%', md: 'auto' },
           }}>
-            <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#1F2937', fontSize: 20 }}>
+            <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700, color: '#1F2937', fontSize: { xs: 15, md: 18 } }}>
               Avis globaux
             </Typography>
             <Box display="flex" alignItems="center" justifyContent="center" sx={{ mb: 1 }}>
-              <Typography variant="h2" sx={{ fontWeight: 800, mr: 1, color: badge.color, lineHeight: 1, fontSize: 38 }}>
+              <Typography variant="h1" sx={{ fontWeight: 900, mr: 1, color: badge.color, lineHeight: 1, fontSize: { xs: 44, md: 56 } }}>
                 {averageRating.toFixed(1)}
               </Typography>
               <Rating
@@ -326,10 +424,10 @@ const PageReviews = () => {
                 precision={0.5}
                 readOnly
                 size="large"
-                sx={{ mr: 1, color: badge.color, fontSize: 32 }}
+                sx={{ mr: 1, color: badge.color, fontSize: { xs: 32, md: 40 } }}
               />
             </Box>
-            <Box display="flex" alignItems="center" justifyContent="center" gap={1} sx={{ mb: 2 }}>
+            <Box display="flex" alignItems="center" justifyContent="center" gap={1} sx={{ mb: 1 }}>
               <Box sx={{
                 bgcolor: badge.color,
                 color: badge.textColor,
@@ -337,21 +435,20 @@ const PageReviews = () => {
                 py: 0.5,
                 borderRadius: 2,
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: { xs: 12, md: 15 },
                 letterSpacing: 0.5,
-                minWidth: 80,
+                minWidth: 60,
                 textAlign: 'center',
               }}>{badge.label}</Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 15, color: '#1F2937' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: 12, md: 15 }, color: '#1F2937' }}>
                 {totalReviews} avis
               </Typography>
             </Box>
-            {/* Bar chart modernisé */}
-            <Box sx={{ mt: 1 }}>
+            <Box sx={{ mt: 0.5 }}>
               {[5, 4, 3, 2, 1].map(star => (
-                <Box key={star} display="flex" alignItems="center" sx={{ mb: 1 }}>
-                  <Typography sx={{ width: 38, fontSize: 15, color: '#1F2937' }}>{star}★</Typography>
-                  <Box sx={{ flex: 1, mx: 1, height: 16, bgcolor: '#F3F4F6', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+                <Box key={star} display="flex" alignItems="center" sx={{ mb: 0.5 }}>
+                  <Typography sx={{ width: 24, fontSize: { xs: 12, md: 15 }, color: '#1F2937' }}>{star}★</Typography>
+                  <Box sx={{ flex: 1, mx: 1, height: 8, bgcolor: '#F3F4F6', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
                     <Box
                       sx={{
                         width: `${totalReviews ? (starCounts[star - 1] / totalReviews) * 100 : 0}%`,
@@ -367,7 +464,7 @@ const PageReviews = () => {
                       }}
                     />
                   </Box>
-                  <Typography sx={{ width: 32, fontSize: 15, textAlign: 'right', color: '#1F2937' }}>{starCounts[star - 1]}</Typography>
+                  <Typography sx={{ width: 18, fontSize: { xs: 12, md: 15 }, textAlign: 'right', color: '#1F2937' }}>{starCounts[star - 1]}</Typography>
                 </Box>
               ))}
             </Box>
@@ -375,20 +472,23 @@ const PageReviews = () => {
         </Grid>
       </Grid>
 
-      {/* Formulaire d'avis : visible si l'utilisateur a moins de 5 avis */}
+      {/* Success badge for review submission */}
       {user ? (
         userReview || successMessage ? (
-          <Paper sx={{ p: { xs: 2, md: 4 }, mb: 4, textAlign: 'center', background: 'linear-gradient(135deg, #F3F4F6 80%, #FFFFFF 100%)', borderRadius: 4, boxShadow: 3, border: '1.5px solid #FDE68A' }}>
-            <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#10B981', fontSize: 24 }}>
-              Merci pour votre avis !
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 2, color: '#1F2937', fontSize: 17, fontWeight: 500 }}>
-              {successMessage || 'Votre avis a bien été soumis et aide la communauté. Vous pouvez le modifier ou le supprimer à tout moment.'}
+          <Paper sx={{ p: { xs: 1.5, md: 3 }, mb: 3, textAlign: 'center', background: '#E6F9ED', borderRadius: 4, boxShadow: 2, border: '1.5px solid #10B981', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <CheckCircleIcon sx={{ color: '#10B981', fontSize: 28 }} />
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#10B981', fontSize: 18 }}>
+                Avis soumis !
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ color: '#1F2937', fontSize: 15, fontWeight: 500 }}>
+              Merci, votre avis aide la communauté.
             </Typography>
             {userReview && (
-              <Box sx={{ mb: 2 }}>
-                <Rating value={userReview.rating} readOnly sx={{ mb: 1, fontSize: 28, color: getStarColor(userReview.rating) }} />
-                <Typography variant="body2" sx={{ mb: 1, fontSize: 16, color: '#1F2937' }}>{userReview.comment}</Typography>
+              <Box sx={{ mb: 1 }}>
+                <Rating value={userReview.rating} readOnly sx={{ mb: 1, fontSize: 28, color: '#FFD600' }} />
+                <Typography variant="body2" sx={{ mb: 1, fontSize: 17, color: '#1F2937' }}>{userReview.comment}</Typography>
               </Box>
             )}
           </Paper>
@@ -402,7 +502,7 @@ const PageReviews = () => {
                 value={rating}
                 onChange={(_, newValue) => setRating(newValue || 0)}
                 size="large"
-                sx={{ mb: 2, fontSize: 32, color: getStarColor(rating) }}
+                sx={{ mb: 2, fontSize: 32, color: '#FFD600' }}
               />
               <TextField
                 fullWidth
@@ -429,8 +529,33 @@ const PageReviews = () => {
           </Paper>
         )
       ) : (
-        <Alert severity="info" sx={{ mb: 4, borderRadius: 2, fontSize: 16, bgcolor: '#FDE68A', color: '#1F2937' }}>
-          Connectez-vous pour laisser un avis
+        <Alert severity="info" sx={{ mb: 4, borderRadius: 2, fontSize: 16, bgcolor: '#FDE68A', color: '#1F2937', display: 'flex', justifyContent: 'center', alignItems: 'center', p: { xs: 2, md: 3 } }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+            <span style={{ marginBottom: 14, textAlign: 'center', width: '100%' }}>Connectez-vous pour laisser un avis</span>
+            <Button
+              variant="contained"
+              size="medium"
+              sx={{
+                bgcolor: '#10B981',
+                color: '#fff',
+                fontWeight: 700,
+                borderRadius: 3,
+                px: 3,
+                py: 1,
+                fontSize: 16,
+                boxShadow: 'none',
+                textTransform: 'none',
+                width: { xs: '100%', sm: 'auto' },
+                '&:hover': {
+                  bgcolor: '#059669',
+                  color: '#fff',
+                },
+              }}
+              onClick={signInWithGoogle}
+            >
+              Se connecter
+            </Button>
+          </Box>
         </Alert>
       )}
 
@@ -443,10 +568,10 @@ const PageReviews = () => {
           Aucun avis pour le moment
         </Alert>
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           {reviews.map((review) => (
             <Grid item xs={12} key={review.id}>
-              <Card sx={{ borderRadius: 4, boxShadow: '0 8px 32px rgba(16,185,129,0.10)', background: 'linear-gradient(135deg, #FFFFFF 80%, #F3F4F6 100%)', border: '1.5px solid #FDE68A', transition: 'box-shadow 0.3s, transform 0.2s', '&:hover': { boxShadow: '0 16px 40px rgba(253,230,138,0.18)', background: '#FDE68A', transform: 'translateY(-2px) scale(1.01)' } }}>
+              <Card sx={{ borderRadius: 4, boxShadow: '0 8px 32px rgba(16,185,129,0.10)', background: 'linear-gradient(135deg, #FFFFFF 80%, #F3F4F6 100%)', border: '1.5px solid #FDE68A', transition: 'box-shadow 0.3s, transform 0.2s', '&:hover': { boxShadow: '0 16px 40px rgba(253,230,138,0.18)', background: '#FDE68A', transform: 'translateY(-2px) scale(1.01)' }, p: { xs: 2, md: 3 } }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Avatar
@@ -455,7 +580,7 @@ const PageReviews = () => {
                       sx={{ mr: 2, width: 56, height: 56, boxShadow: 2, border: '2px solid #fff', background: '#fff' }}
                     />
                     <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 18, color: '#1F2937' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 20, color: '#1F2937' }}>
                         {review.userName}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: 15, fontWeight: 500, color: '#1F2937' }}>
@@ -463,19 +588,19 @@ const PageReviews = () => {
                       </Typography>
                     </Box>
                   </Box>
-                  <Rating value={review.rating} readOnly sx={{ mb: 1, fontSize: 28, color: getStarColor(review.rating) }} />
-                  <Typography variant="body1" sx={{ mb: 2, fontSize: 17, color: '#1F2937', fontWeight: 500 }}>
+                  <Rating value={review.rating} readOnly sx={{ mb: 1, fontSize: 28, color: '#FFD600' }} />
+                  <Typography variant="body1" sx={{ mb: 2, fontSize: 18, color: '#1F2937', fontWeight: 500 }}>
                     {review.comment}
                   </Typography>
-                  {/* Bouton Modifier/Supprimer pour l'avis de l'utilisateur courant */}
+                  {/* Modifier/Supprimer buttons below with more padding */}
                   {user && review.userId === user.uid && (
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
                       {editingReviewId === review.id ? (
                         <>
                           <Rating
                             value={editRating}
                             onChange={(_, newValue) => setEditRating(newValue || 0)}
-                            sx={{ mb: 1, fontSize: 28, color: getStarColor(editRating) }}
+                            sx={{ mb: 1, fontSize: 28, color: '#FFD600' }}
                           />
                           <TextField
                             fullWidth
@@ -491,14 +616,14 @@ const PageReviews = () => {
                             color="primary"
                             onClick={() => handleUpdateReview(review)}
                             disabled={!editRating || !editComment}
-                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 15, letterSpacing: 0.5, boxShadow: 'none', background: '#10B981', color: '#FFFFFF', transition: 'all 0.2s', '&:hover': { background: '#059669', boxShadow: 2 } }}
+                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 16, letterSpacing: 0.5, boxShadow: 'none', background: '#10B981', color: '#FFFFFF', transition: 'all 0.2s', '&:hover': { background: '#059669', boxShadow: 2 }, mb: 1 }}
                           >
                             Valider
                           </Button>
                           <Button
                             variant="outlined"
                             onClick={() => setEditingReviewId(null)}
-                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 15, borderWidth: 2, color: '#10B981', borderColor: '#10B981', background: '#FFFFFF', transition: 'all 0.2s', boxShadow: 'none', '&:hover': { background: '#FDE68A', borderColor: '#10B981', color: '#1F2937', boxShadow: 2 } }}
+                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 16, borderWidth: 2, color: '#10B981', borderColor: '#10B981', background: '#FFFFFF', transition: 'all 0.2s', boxShadow: 'none', '&:hover': { background: '#FDE68A', borderColor: '#10B981', color: '#1F2937', boxShadow: 2 } }}
                           >
                             Annuler
                           </Button>
@@ -507,7 +632,7 @@ const PageReviews = () => {
                         <>
                           <Button
                             variant="outlined"
-                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 15, borderWidth: 2, color: '#10B981', borderColor: '#10B981', background: '#FFFFFF', transition: 'all 0.2s', boxShadow: 'none', '&:hover': { background: '#FDE68A', borderColor: '#10B981', color: '#1F2937', boxShadow: 2 } }}
+                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 16, borderWidth: 2, color: '#10B981', borderColor: '#10B981', background: '#FFFFFF', transition: 'all 0.2s', boxShadow: 'none', '&:hover': { background: '#FDE68A', borderColor: '#10B981', color: '#1F2937', boxShadow: 2 }, mb: 1 }}
                             onClick={() => {
                               setEditingReviewId(review.id);
                               setEditRating(review.rating);
@@ -519,7 +644,7 @@ const PageReviews = () => {
                           <Button
                             variant="outlined"
                             color="error"
-                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 15, borderWidth: 2, color: '#EF4444', borderColor: '#EF4444', background: '#FFFFFF', transition: 'all 0.2s', boxShadow: 'none', '&:hover': { background: '#FDE68A', borderColor: '#EF4444', color: '#1F2937', boxShadow: 2 } }}
+                            sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, fontSize: 16, borderWidth: 2, color: '#EF4444', borderColor: '#EF4444', background: '#FFFFFF', transition: 'all 0.2s', boxShadow: 'none', '&:hover': { background: '#FDE68A', borderColor: '#EF4444', color: '#1F2937', boxShadow: 2 } }}
                             onClick={async () => {
                               await deleteDoc(doc(db, 'reviews', review.id));
                               setReviews(reviews.filter(r => r.id !== review.id));

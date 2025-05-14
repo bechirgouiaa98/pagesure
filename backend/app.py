@@ -1,46 +1,32 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
-import re
-import time
+import os
+import subprocess
+import json
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["http://localhost:3000", "https://pagesure-frontend-app.onrender.com"])
 
 def scrape_facebook_data(url):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto(url)
-        time.sleep(3)
-
-        soup = BeautifulSoup(page.content(), 'html.parser')
-
-        # Logo image (SVG or image tag)
-        logo_img = soup.select_one('image')
-        # Followers
-        followers_tag = soup.find('a', string=re.compile(r' followers$'))
-        # Page name (from <title>)
-        title_tag = soup.find('title')
-        page_name = "N/A"
-        if title_tag:
-            # Remove 'Facebook' and anything after '|' or '-'
-            title_text = title_tag.text.strip()
-            # Remove 'Facebook' and split on '|' or '-'
-            title_text = re.split(r'\||-', title_text)[0].strip()
-            title_text = title_text.replace('Facebook', '').strip()
-            page_name = title_text
-
-        data = {
-            "logo_image": logo_img['xlink:href'] if logo_img else None,
-            "page_name": page_name,
-            "followers": followers_tag.get_text() if followers_tag else "N/A"
-        }
-
-        browser.close()
+    try:
+        # Run the Node.js script as a subprocess
+        result = subprocess.run(
+            ['node', 'scrapers/facebook_scraper.js', url],
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            check=True
+        )
+        
+        # Parse the JSON output
+        data = json.loads(result.stdout)
         return data
+    except subprocess.CalledProcessError as e:
+        print(f"Error running scraper: {e.stderr}")
+        raise Exception("Failed to scrape Facebook page")
+    except json.JSONDecodeError:
+        print(f"Invalid JSON output: {result.stdout}")
+        raise Exception("Invalid response from scraper")
 
 @app.route('/api/scrape', methods=['POST'])
 def scrape():
@@ -53,6 +39,9 @@ def scrape():
         data = scrape_facebook_data(url)
         return jsonify(data)
     except Exception as e:
+        import traceback
+        print('--- Exception in /api/scrape ---')
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

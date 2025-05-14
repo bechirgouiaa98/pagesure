@@ -189,36 +189,6 @@ const MyReviews = () => {
                   <Typography variant="body1" sx={{ mb: 2, fontSize: 17, color: '#1F2937', fontWeight: 500 }}>
                     {review.comment}
                   </Typography>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="medium"
-                    sx={{
-                      borderRadius: 3,
-                      px: 3,
-                      py: 1,
-                      fontWeight: 600,
-                      fontSize: 15,
-                      borderWidth: 2,
-                      transition: 'all 0.2s',
-                      boxShadow: 'none',
-                      color: '#10B981',
-                      borderColor: '#10B981',
-                      '&:hover': {
-                        background: 'rgba(16,185,129,0.08)',
-                        borderColor: '#10B981',
-                        boxShadow: 2,
-                        color: '#1F2937',
-                        bgcolor: '#FDE68A',
-                      },
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteReview(review.id);
-                    }}
-                  >
-                    Supprimer
-                  </Button>
                 </CardContent>
               </Card>
             </Grid>

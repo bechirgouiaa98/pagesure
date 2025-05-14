@@ -44,23 +44,9 @@ const Header = () => {
   return (
     <AppBar position="static" sx={{ bgcolor: '#10B981', color: '#1F2937', borderRadius: 0, boxShadow: '0 4px 24px rgba(16,185,129,0.10)', px: { xs: 1, md: 4 }, py: 0.5 }}>
       <Toolbar sx={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography
-          variant="h6"
-          component={RouterLink}
-          to="/"
-          sx={{
-            flexGrow: 1,
-            textDecoration: 'none',
-            color: '#FFFFFF',
-            fontWeight: 800,
-            fontSize: 28,
-            letterSpacing: 1,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          PageSure
-        </Typography>
+        <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexGrow: 1 }}>
+          <img src="/logo.svg" alt="PageSure Logo" style={{ height: 40, width: 'auto', display: 'block' }} />
+        </Box>
         {user ? (
           <>
             {!isMobile && (
