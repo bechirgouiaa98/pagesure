@@ -5,7 +5,7 @@ import subprocess
 import json
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "https://pagesure-frontend-app.onrender.com"])
+CORS(app, origins=["http://localhost:3000", "https://pagesure-1.onrender.com"])
 
 def scrape_facebook_data(url):
     try:
