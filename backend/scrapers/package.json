@@ -4,8 +4,7 @@
   "description": "Facebook page scraper using Puppeteer",
   "main": "facebook_scraper.js",
   "scripts": {
-    "start": "node server.js",
-    "postinstall": "puppeteer install"
+    "start": "node server.js"
   },
   "dependencies": {
     "body-parser": "^2.2.0",
