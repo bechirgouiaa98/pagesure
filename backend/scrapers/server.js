@@ -14,11 +14,13 @@ app.use(bodyParser.json());
 
 app.post('/api/scrape', async (req, res) => {
   const { url } = req.body;
+  console.log('Received /api/scrape request for URL:', url);
   if (!url) return res.status(400).json({ error: 'Missing URL' });
   try {
     const data = await scrapeFacebookPage(url);
     res.json(data);
   } catch (err) {
+    console.error('Error in /api/scrape:', err);
     res.status(500).json({ error: err.message });
   }
 });
