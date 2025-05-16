@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 // Concurrency control for scrapes
 let runningScrapes = 0;
 const scrapeQueue = [];
-const MAX_CONCURRENT_SCRAPES = 2;
+const MAX_CONCURRENT_SCRAPES = 1;
 
 async function runScrapeTask(task) {
   if (runningScrapes < MAX_CONCURRENT_SCRAPES) {
@@ -36,9 +36,8 @@ async function runScrapeTask(task) {
 
 app.post('/api/scrape', (req, res) => {
   const { url } = req.body;
-  console.log('Received /api/scrape request for URL:', url);
-  if (!url) return res.status(400).json({ error: 'Missing URL' });
   runScrapeTask(async () => {
+    console.log('Processing /api/scrape for URL:', url);
     try {
       const data = await scrapeFacebookPage(url);
       res.json(data);
