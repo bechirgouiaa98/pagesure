@@ -1,8 +1,11 @@
      [
        {
-         "origin": ["http://localhost:3000"],
-         "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+         "origin": [
+           "http://localhost:3000",
+           "https://pagesure-production.up.railway.app"
+         ],
+         "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
          "maxAgeSeconds": 3600,
-         "responseHeader": ["Content-Type", "Authorization"]
+         "responseHeader": ["Content-Type", "Authorization", "x-goog-meta-*", "x-goog-resumable", "x-goog-storage-class", "x-goog-encryption-algorithm", "x-goog-encryption-key-sha256", "x-goog-copy-source-encryption-algorithm", "x-goog-copy-source-encryption-key-sha256"]
        }
      ]

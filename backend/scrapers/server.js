@@ -12,17 +12,41 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-app.post('/api/scrape', async (req, res) => {
+// Concurrency control for scrapes
+let runningScrapes = 0;
+const scrapeQueue = [];
+const MAX_CONCURRENT_SCRAPES = 2;
+
+async function runScrapeTask(task) {
+  if (runningScrapes < MAX_CONCURRENT_SCRAPES) {
+    runningScrapes++;
+    try {
+      await task();
+    } finally {
+      runningScrapes--;
+      if (scrapeQueue.length > 0) {
+        const nextTask = scrapeQueue.shift();
+        runScrapeTask(nextTask);
+      }
+    }
+  } else {
+    scrapeQueue.push(task);
+  }
+}
+
+app.post('/api/scrape', (req, res) => {
   const { url } = req.body;
   console.log('Received /api/scrape request for URL:', url);
   if (!url) return res.status(400).json({ error: 'Missing URL' });
-  try {
-    const data = await scrapeFacebookPage(url);
-    res.json(data);
-  } catch (err) {
-    console.error('Error in /api/scrape:', err);
-    res.status(500).json({ error: err.message });
-  }
+  runScrapeTask(async () => {
+    try {
+      const data = await scrapeFacebookPage(url);
+      res.json(data);
+    } catch (err) {
+      console.error('Error in /api/scrape:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 });
 
 const PORT = process.env.PORT || 3001;
